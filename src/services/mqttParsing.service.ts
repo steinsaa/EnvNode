@@ -1,7 +1,7 @@
 import { ChipStatus, MqttChipStatusPayload, MqttSensorPayload, SensorReading } from '../models';
 
 type SensorTopicParts = {
-    sensorType: string;
+    sensorType?: string;
     mcuId: string;
     sensorId: string;
 };
@@ -18,16 +18,27 @@ const toDateFromEpochSeconds = (epochSeconds: number): Date => {
 
 export const parseSensorTopic = (topic: string): SensorTopicParts => {
     const parts = topic.split('/');
-    if (parts.length !== 4 || parts[0] !== SENSOR_TOPIC_PREFIX) {
+    if (parts[0] !== SENSOR_TOPIC_PREFIX) {
         throw new Error(`Invalid sensor topic: ${topic}`);
     }
 
-    const [, sensorType, mcuId, sensorId] = parts;
-    if (!sensorType || !mcuId || !sensorId) {
-        throw new Error(`Invalid sensor topic parts: ${topic}`);
+    if (parts.length === 4) {
+        const [, sensorType, mcuId, sensorId] = parts;
+        if (!sensorType || !mcuId || !sensorId) {
+            throw new Error(`Invalid sensor topic parts: ${topic}`);
+        }
+        return { sensorType, mcuId, sensorId };
     }
 
-    return { sensorType, mcuId, sensorId };
+    if (parts.length === 3) {
+        const [, mcuId, sensorId] = parts;
+        if (!mcuId || !sensorId) {
+            throw new Error(`Invalid sensor topic parts: ${topic}`);
+        }
+        return { mcuId, sensorId };
+    }
+
+    throw new Error(`Invalid sensor topic: ${topic}`);
 };
 
 export const parseStatusTopic = (topic: string): void => {
@@ -37,21 +48,36 @@ export const parseStatusTopic = (topic: string): void => {
 };
 
 export const parseSensorPayload = (payload: MqttSensorPayload, topic: string): SensorReading => {
-    const { sensorType, mcuId, sensorId } = parseSensorTopic(topic);
+    const { sensorType: topicSensorType, mcuId, sensorId } = parseSensorTopic(topic);
 
     if (!payload.MCU_id || typeof payload.epoch_s !== 'number') {
         throw new Error('Sensor payload missing required fields');
     }
 
+    const sensorType = payload.sensor_type ?? topicSensorType;
+    if (!sensorType) {
+        throw new Error('Sensor payload missing sensor_type');
+    }
+
     const metrics: Record<string, number> = {};
+    const ignoredKeys = new Set([
+        'MCU_id',
+        'MCU_mac',
+        'sensor_type',
+        'sensor_id',
+        'epoch_s',
+        'temp_c',
+    ]);
+
     Object.entries(payload).forEach(([key, value]) => {
-        if (key === 'MCU_id' || key === 'epoch_s') return;
+        if (ignoredKeys.has(key)) return;
         if (typeof value === 'number') {
             metrics[key] = value;
         }
     });
 
     return {
+        mcuMac: payload.MCU_mac ?? '',
         mcuId: payload.MCU_id,
         timestamp: toDateFromEpochSeconds(payload.epoch_s),
         sensorType,
@@ -65,16 +91,20 @@ export const parseSensorPayload = (payload: MqttSensorPayload, topic: string): S
 export const parseChipStatusPayload = (payload: MqttChipStatusPayload, topic: string): ChipStatus => {
     parseStatusTopic(topic);
 
-    if (!payload.MCU_id || typeof payload.epoch_s !== 'number' || !payload.ip_address) {
+    const ipAddress = payload.ip_address;
+    const mcuMac = payload.MCU_mac;
+
+    if (!payload.MCU_id || typeof payload.epoch_s !== 'number' || !ipAddress) {
         throw new Error('Chip status payload missing required fields');
     }
 
     const { MCU_id, epoch_s, ip_address, ...rest } = payload;
 
     return {
+        mcuMac: mcuMac ?? '',
         mcuId: MCU_id,
         timestamp: toDateFromEpochSeconds(epoch_s),
-        ipAddress: ip_address,
+        ipAddress,
         details: { ...rest },
     };
 };
