@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import dotenv from 'dotenv';
 
-import { MqttRepository} from '../repositories/mqtt.Repository';
+import { MqttRepository} from '../repositories/mqtt.Repository.js';
 
 // Load environment variables from .env file
 const result = dotenv.config();

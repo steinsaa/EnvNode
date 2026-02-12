@@ -2,7 +2,7 @@
 
 import * as mqtt from 'mqtt';
 import pino from 'pino';
-import { getMqttConfig, MqttRetryConfig, MqttRuntimeConfig } from '../config/mqtt.config';
+import { getMqttConfig, MqttRetryConfig, MqttRuntimeConfig } from '../config/mqtt.config.js';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 

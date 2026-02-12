@@ -4,7 +4,7 @@ import {
     parseSensorPayload,
     parseSensorTopic,
     parseStatusTopic,
-} from '../services/mqttParsing.service';
+} from '../services/mqttParsing.service.js';
 
 describe('mqttParsing.service', () => {
     it('parses sensor topic parts', () => {
@@ -52,4 +52,5 @@ describe('mqttParsing.service', () => {
         expect(status.details.firmware).toBe('1.0.0');
         expect(status.timestamp).toBeInstanceOf(Date);
     });
+
 });

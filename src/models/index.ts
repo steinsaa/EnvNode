@@ -1,2 +1,2 @@
-export * from './sensorReading.model';
-export * from './chipStatus.model';
+export * from './sensorReading.model.js';
+export * from './chipStatus.model.js';

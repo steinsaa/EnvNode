@@ -1,14 +1,14 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import * as mqtt from 'mqtt';
-import { getMqttConfig } from '../config/mqtt.config';
-import { MqttRepository, mqttRepository } from '../repositories/mqtt.Repository';
+import { getMqttConfig, MqttRuntimeConfig } from '../config/mqtt.config.js';
+import { MqttRepository, mqttRepository } from '../repositories/mqtt.Repository.js';
 
 vi.mock('mqtt', () => ({
     connect: vi.fn(),
 }));
 
-vi.mock('../config/mqtt.config', () => ({
+vi.mock('../config/mqtt.config.js', () => ({
     getMqttConfig: vi.fn(),
 }));
 
@@ -36,7 +36,7 @@ const createMockClient = (): MockClient => {
     return client;
 };
 
-const mockRuntimeConfig = {
+const mockRuntimeConfig: MqttRuntimeConfig = {
     clientOptions: {
         host: 'localhost',
         port: 1883,

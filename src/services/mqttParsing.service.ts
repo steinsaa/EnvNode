@@ -1,4 +1,4 @@
-import { ChipStatus, MqttChipStatusPayload, MqttSensorPayload, SensorReading } from '../models';
+import { ChipStatus, MqttChipStatusPayload, MqttSensorPayload, SensorReading } from '../models/index.js';
 
 type SensorTopicParts = {
     sensorType?: string;
