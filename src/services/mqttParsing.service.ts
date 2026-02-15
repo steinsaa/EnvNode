@@ -50,7 +50,7 @@ export const parseStatusTopic = (topic: string): void => {
 export const parseSensorPayload = (payload: MqttSensorPayload, topic: string): SensorReading => {
     const { sensorType: topicSensorType, mcuId, sensorId } = parseSensorTopic(topic);
 
-    if (!payload.MCU_id || typeof payload.epoch_s !== 'number') {
+    if (typeof payload.MCU_id !== 'string' || payload.MCU_id.trim().length === 0 || typeof payload.epoch_s !== 'number') {
         throw new Error('Sensor payload missing required fields');
     }
 
@@ -59,7 +59,13 @@ export const parseSensorPayload = (payload: MqttSensorPayload, topic: string): S
         throw new Error('Sensor payload missing sensor_type');
     }
 
+    const resolvedSensorId = payload.sensor_id ?? sensorId;
+    if (typeof resolvedSensorId !== 'string' || resolvedSensorId.trim().length === 0) {
+        throw new Error('Sensor payload missing sensor_id');
+    }
+
     const metrics: Record<string, number> = {};
+    const extras: Record<string, unknown> = {};
     const ignoredKeys = new Set([
         'MCU_id',
         'MCU_mac',
@@ -73,7 +79,10 @@ export const parseSensorPayload = (payload: MqttSensorPayload, topic: string): S
         if (ignoredKeys.has(key)) return;
         if (typeof value === 'number') {
             metrics[key] = value;
+            return;
         }
+
+        extras[key] = value;
     });
 
     return {
@@ -81,9 +90,10 @@ export const parseSensorPayload = (payload: MqttSensorPayload, topic: string): S
         mcuId: payload.MCU_id,
         timestamp: toDateFromEpochSeconds(payload.epoch_s),
         sensorType,
-        sensorId,
+        sensorId: resolvedSensorId,
         tempC: typeof payload.temp_c === 'number' ? payload.temp_c : undefined,
         metrics,
+        extras,
         raw: { ...payload },
     };
 };

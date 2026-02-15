@@ -33,6 +33,62 @@ describe('mqttParsing.service', () => {
         expect(reading.timestamp).toBeInstanceOf(Date);
     });
 
+    it('accepts payload shape with humidity metric from user example', () => {
+        const payload = {
+            MCU_mac: 'e0:e2:e6:9d:0f:04',
+            MCU_id: 'test3',
+            sensor_type: 'dht22',
+            epoch_s: 1_771_170_020,
+            temp_c: 27.6,
+            humidity: 26.7,
+        };
+
+        const reading = parseSensorPayload(payload, 'sensors/test3/dht22');
+
+        expect(reading.mcuMac).toBe('e0:e2:e6:9d:0f:04');
+        expect(reading.mcuId).toBe('test3');
+        expect(reading.sensorType).toBe('dht22');
+        expect(reading.sensorId).toBe('dht22');
+        expect(reading.tempC).toBe(27.6);
+        expect(reading.metrics.humidity).toBe(26.7);
+    });
+
+    it('parses non-temperature sensors when temp_c is missing', () => {
+        const payload = {
+            MCU_id: 'MCU_NO_TEMP',
+            sensor_type: 'co2',
+            epoch_s: 1_700_000_100,
+            ppm: 612,
+        };
+
+        const reading = parseSensorPayload(payload, 'sensors/MCU_NO_TEMP/CO2_1');
+
+        expect(reading.tempC).toBeUndefined();
+        expect(reading.metrics.ppm).toBe(612);
+        expect(reading.sensorId).toBe('CO2_1');
+        expect(reading.sensorType).toBe('co2');
+    });
+
+    it('maps non-numeric unknown payload fields to extras', () => {
+        const payload = {
+            MCU_id: 'MCU_META',
+            sensor_type: 'env',
+            epoch_s: 1_700_000_200,
+            humidity: 41.2,
+            unit: 'percent',
+            calibrated: true,
+            note: null,
+        };
+
+        const reading = parseSensorPayload(payload, 'sensors/MCU_META/ENV_1');
+
+        expect(reading.metrics.humidity).toBe(41.2);
+        expect(reading.extras.unit).toBe('percent');
+        expect(reading.extras.calibrated).toBe(true);
+        expect(reading.extras.note).toBeNull();
+        expect(reading.metrics.unit).toBeUndefined();
+    });
+
     it('accepts status topic and maps payload', () => {
         parseStatusTopic('status/running');
 

@@ -1,25 +1,35 @@
 import "dotenv/config";
 import express from "express";
-import { mqttIngestionService, startMqttIngestion } from "./services/mqttIngestion.service.js";
+import { fileURLToPath } from "node:url";
+import { apiRouter } from "./routes/api.routes.js";
+import { startMqttIngestion } from "./services/mqttIngestion.service.js";
 
-const app = express();
-const port = Number(process.env.PORT ?? 3000);
+export const createApp = () => {
+  const app = express();
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
-});
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
 
-app.get("/api/latest-readings", (_req, res) => {
-  res.json(mqttIngestionService.getLatestSensorReadings());
-});
+  app.use("/api", apiRouter);
 
-app.get("/api/status", (_req, res) => {
-  res.json(mqttIngestionService.getLatestChipStatuses());
-});
+  return app;
+};
 
-void startMqttIngestion();
+export const startServer = async (): Promise<void> => {
+  const app = createApp();
+  const port = Number(process.env.PORT ?? 3000);
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`API listening on port ${port}`);
-});
+  await startMqttIngestion();
+
+  app.listen(port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`API listening on port ${port}`);
+  });
+};
+
+const isDirectExecution = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isDirectExecution) {
+  void startServer();
+}
