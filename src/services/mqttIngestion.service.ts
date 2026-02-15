@@ -1,6 +1,7 @@
 import pino from 'pino';
 import { ChipStatus, SensorReading } from '../models/index.js';
 import { mqttRepository } from '../repositories/mqtt.Repository.js';
+import { telemetryStore, TelemetryStore } from '../repositories/telemetry.Store.js';
 import { parseChipStatusPayload, parseSensorPayload } from './mqttParsing.service.js';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
@@ -14,6 +15,8 @@ export class MqttIngestionService {
     private readonly latestSensorReadings = new Map<LatestSensorKey, SensorReading>();
     private readonly latestChipStatuses = new Map<string, ChipStatus>();
     private messageHandler: MessageHandler | null = null;
+
+    public constructor(private readonly store: TelemetryStore = telemetryStore) {}
 
     public async start(): Promise<void> {
         if (this.isStarted) {
@@ -30,6 +33,9 @@ export class MqttIngestionService {
 
                 if (topic.startsWith('sensors/')) {
                     const reading = parseSensorPayload(payload as never, topic);
+                    void this.store.saveSensorReading(reading).catch((error) => {
+                        logger.error({ error, topic }, 'Failed to persist sensor reading');
+                    });
                     const key: LatestSensorKey = `${reading.mcuId}:${reading.sensorId}`;
                     this.latestSensorReadings.set(key, reading);
                     logger.info({
@@ -43,6 +49,9 @@ export class MqttIngestionService {
 
                 if (topic === 'status/running') {
                     const status = parseChipStatusPayload(payload as never, topic);
+                    void this.store.saveChipStatus(status).catch((error) => {
+                        logger.error({ error, topic }, 'Failed to persist chip status');
+                    });
                     this.latestChipStatuses.set(status.mcuId, status);
                     logger.info({
                         topic,
