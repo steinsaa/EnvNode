@@ -84,7 +84,26 @@ describe('api.routes', () => {
             const body = await response.json() as { endpoints: string[] };
 
             expect(response.status).toBe(200);
-            expect(body.endpoints).toEqual(['/api/latest-readings', '/api/status']);
+            expect(body.endpoints).toEqual(['/api/latest-readings', '/api/status', '/api/db-health']);
+        } finally {
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => (error ? reject(error) : resolve()));
+            });
+        }
+    });
+
+    it('returns telemetry db health', async () => {
+        const server = await createTestServer();
+        const port = (server.address() as AddressInfo).port;
+
+        try {
+            const response = await fetch(`http://127.0.0.1:${port}/api/db-health`);
+            const body = await response.json() as { ok: boolean; storeType: string; details: string };
+
+            expect(response.status).toBe(200);
+            expect(body.ok).toBe(true);
+            expect(body.storeType).toBeDefined();
+            expect(body.details).toBeDefined();
         } finally {
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => (error ? reject(error) : resolve()));
@@ -153,7 +172,7 @@ describe('api.routes', () => {
             const apiBody = await apiResponse.json() as { endpoints: string[] };
 
             expect(apiResponse.status).toBe(200);
-            expect(apiBody.endpoints).toEqual(['/api/latest-readings', '/api/status']);
+            expect(apiBody.endpoints).toEqual(['/api/latest-readings', '/api/status', '/api/db-health']);
         } finally {
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => (error ? reject(error) : resolve()));

@@ -11,6 +11,12 @@ export interface InitializableTelemetryStore extends TelemetryStore {
     initialize(): Promise<void>;
 }
 
+export type TelemetryStoreHealth = {
+    ok: boolean;
+    storeType: string;
+    details: string;
+};
+
 export class NoopTelemetryStore implements TelemetryStore {
     public async saveSensorReading(_reading: SensorReading): Promise<void> {
         return;
@@ -85,4 +91,31 @@ export const getTelemetryStoreType = (store: TelemetryStore = telemetryStore): s
     }
 
     return store.constructor.name;
+};
+
+export const getTelemetryStoreHealth = async (
+    store: TelemetryStore = telemetryStore,
+): Promise<TelemetryStoreHealth> => {
+    if (store instanceof PostgresTelemetryStore) {
+        await store.checkHealth();
+        return {
+            ok: true,
+            storeType: 'postgres',
+            details: 'Postgres connection is healthy',
+        };
+    }
+
+    if (store instanceof NoopTelemetryStore) {
+        return {
+            ok: true,
+            storeType: 'noop',
+            details: 'No-op telemetry store active (DB writes disabled)',
+        };
+    }
+
+    return {
+        ok: true,
+        storeType: getTelemetryStoreType(store),
+        details: 'Telemetry store active',
+    };
 };

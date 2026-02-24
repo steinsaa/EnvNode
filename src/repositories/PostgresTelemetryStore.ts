@@ -116,4 +116,8 @@ export class PostgresTelemetryStore implements TelemetryStore {
             ],
         );
     }
+
+    public async checkHealth(): Promise<void> {
+        await this.client.query('SELECT 1;');
+    }
 }
